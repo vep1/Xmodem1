@@ -64,23 +64,28 @@ SenderY(vector<const char*> iFileNames, int d)
 //void SenderY::genStatBlk(blkT blkBuf, const char* fileName)
 void SenderY::genStatBlk(uint8_t blkBuf[BLK_SZ_CRC], const char* fileName)
 {
+  // Empty the buffer
    for (int i = 0; i < BLK_SZ_CRC; ++i) {
       blkBuf[i] = 0;
    }
 
+ //Incerting the filename (skip first 3 bits) because leaving the first 3 bits empty for SOH
    int i = 0;
    while (fileName[i] != '\0' && i < CHUNK_SZ - 3) {
       blkBuf[3 + i] = fileName[i];
       ++i;
    }
 
+ //Incerting a null terminator in the end of the filename
    blkBuf[3 + i] = '\0';
 
+ // st holds the metadata
    struct stat st;
 
    if (stat(fileName, &st) == 0) {
       unsigned fileSize = st.st_size;
 
+    // we've got the size of the fiel and now we will drop it to a character and the offset
       char fileSizeStr[20];
       int j = 0;
       do {
@@ -110,6 +115,7 @@ void SenderY::genStatBlk(uint8_t blkBuf[BLK_SZ_CRC], const char* fileName)
    uint16_t myCrc16ns;
    crc16ns(&myCrc16ns, &blkBuf[0]);
 
+ //setting the the second to last and first bytes of the CRC to the high and low bits
    blkBuf[BLK_SZ_CRC - 2] = (myCrc16ns >> 8) & 0xFF;
    blkBuf[BLK_SZ_CRC - 1] = myCrc16ns & 0xFF;
 }
