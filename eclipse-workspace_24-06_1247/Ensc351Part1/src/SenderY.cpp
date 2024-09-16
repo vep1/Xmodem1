@@ -1,8 +1,8 @@
 //============================================================================
 //
-//% Student Name 1: student1
-//% Student 1 #: 123456781
-//% Student 1 userid (email): stu1 (stu1@sfu.ca)
+//% Student Name 1: Daniyar Umuraliyev
+//% Student 1 #: 301385064
+//% Student 1 userid (email): dumurali (dumurali@sfu.ca)
 //
 //% Student Name 2: student2
 //% Student 2 #: 123456782
