@@ -215,8 +215,33 @@ void SenderY::sendFiles()
                 genBlk(blkBuf); // prepare next block
                 // assume sent block was ACK'd
             };
-            // finish up the file transfer, assuming the receiver behaves normally and there are no transmission errors
-            // TODO: ********* fill in some code here ***********
+
+            while (true) {
+                uint8_t eotChar = 0x04;
+                int bytesWritten = write(mediumD, &eotChar, 1);
+
+                if (bytesWritten == -1) {
+                    ErrorPrinter("write(mediumD, &eotChar, 1)", __FILE__, __LINE__, errno);
+                    break;
+                }
+
+                uint8_t response;
+                int bytesRead = read(mediumD, &response, 1);
+
+                if (bytesRead == -1) {
+                    ErrorPrinter("read(mediumD, &response, 1)", __FILE__, __LINE__, errno);
+                    break;
+                }
+
+                if (response == 0x06) {
+                    cout << "EOT acknowledged by receiver" << endl;
+                    break;
+                }
+
+                if (response != 0x06) {
+                    cout << "Resending EOT..." << endl;
+                }
+            }
 
             //(myClose(transferringFileD));
             if (-1 == myClose(transferringFileD))
@@ -231,4 +256,3 @@ void SenderY::sendFiles()
     if (result.size())
         result.erase(result.size() - 2);
 }
-
