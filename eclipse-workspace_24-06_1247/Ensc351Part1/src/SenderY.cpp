@@ -69,14 +69,14 @@ void SenderY::genStatBlk(uint8_t blkBuf[BLK_SZ_CRC], const char* fileName)
       blkBuf[i] = 0;
    }
 
- //Incerting the filename (skip first 3 bits) because leaving the first 3 bits empty for SOH
+ //Inserting the filename (skip first 3 bits) because leaving the first 3 bits empty for SOH
    int i = 0;
    while (fileName[i] != '\0' && i < CHUNK_SZ - 3) {
       blkBuf[3 + i] = fileName[i];
       ++i;
    }
 
- //Incerting a null terminator in the end of the filename
+ //Inserting a null terminator in the end of the filename
    blkBuf[3 + i] = '\0';
 
  // st holds the metadata
@@ -85,7 +85,7 @@ void SenderY::genStatBlk(uint8_t blkBuf[BLK_SZ_CRC], const char* fileName)
    if (stat(fileName, &st) == 0) {
       unsigned fileSize = st.st_size;
 
-    // we've got the size of the fiel and now we will drop it to a character and the offset
+    // we've got the size of the field and now we will drop it to a character and the offset
       char fileSizeStr[20];
       int j = 0;
       do {
@@ -199,7 +199,7 @@ void SenderY::sendFiles()
             cout << "Sender will send " << fileName << endl;
 
             // do the protocol, and simulate a receiver that positively acknowledges every
-            //	block that it receives.
+            // block that it receives.
 
             statBlk(fileName);
 
@@ -215,44 +215,58 @@ void SenderY::sendFiles()
                 genBlk(blkBuf); // prepare next block
                 // assume sent block was ACK'd
             };
+            // finish up the file transfer, assuming the receiver behaves normally and there are no transmission errors
+            // TODO: ********* fill in some code here ***********
+             uint8_t eotChar = 0x04;
+             bool eotSent = false;
+             for (int i = 0; i < 3; ++i) {
+                 int bytesWritten = write(mediumD, &eotChar, 1);
+                 if (bytesWritten == -1) {
+                     ErrorPrinter("write(mediumD, &eotChar, 1)", __FILE__, __LINE__, errno);
+                     continue;
+                 }
+                 else if (bytesWritten == 1) {
+                     eotSent = true;
+                     break;
+                 }
+             }
 
-            while (true) {
-                uint8_t eotChar = 0x04;
-                int bytesWritten = write(mediumD, &eotChar, 1);
+             if (!eotSent) {
+                 cout << "Failed to send EOT after multiple attempts." << endl;
+             }
+             else {
+                 cout << "EOT sent successfully." << endl;
+             }
 
-                if (bytesWritten == -1) {
-                    ErrorPrinter("write(mediumD, &eotChar, 1)", __FILE__, __LINE__, errno);
-                    break;
-                }
+             bool ackReceived = false;
+             for (int i = 0; i < 3; ++i) {
+                 ackReceived = true;
 
-                uint8_t response;
-                int bytesRead = read(mediumD, &response, 1);
+                 if (ackReceived) {
+                     cout << "ACK received for EOT." << endl;
+                     break;
+                 }
+                 else {
+                     cout << "Failed to receive ACK. Retrying..." << endl;
+                 }
+             }
 
-                if (bytesRead == -1) {
-                    ErrorPrinter("read(mediumD, &response, 1)", __FILE__, __LINE__, errno);
-                    break;
-                }
+             if (!ackReceived) {
+                 cout << "Warning: No ACK received after EOT." << endl;
+             }
 
-                if (response == 0x06) {
-                    cout << "EOT acknowledged by receiver" << endl;
-                    break;
-                }
+             //(myClose(transferringFileD));
+             if (-1 == myClose(transferringFileD)) {
+                 ErrorPrinter("myClose(transferringFileD)", __FILE__, __LINE__, errno);
+             }
+             result += "Done, ";
+         }
+     }
+     // indicate end of the batch.
+     statBlk("");
 
-                if (response != 0x06) {
-                    cout << "Resending EOT..." << endl;
-                }
-            }
-
-            //(myClose(transferringFileD));
-            if (-1 == myClose(transferringFileD))
-                ErrorPrinter("myClose(transferringFileD)", __FILE__, __LINE__, errno);
-            result += "Done, ";
-        }
-    }
-    // indicate end of the batch.
-    statBlk("");
-
-    // remove ", " from the end of the result string.
-    if (result.size())
-        result.erase(result.size() - 2);
-}
+     // remove ", " from the end of the result string.
+     if (result.size()) {
+         result.erase(result.size() - 2);
+     }
+ }
